@@ -1,0 +1,78 @@
+﻿@page "/todos"
+@using TodoDemo.Shared
+@inject HttpClient Http
+
+<div>
+    <h3>Todos</h3>
+
+    <EditForm Model="@newTodo" OnValidSubmit="@HandleTodoSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <InputText id="description" @bind-Value="@newTodo.Description" />
+        <button type="submit">Create Todo</button>
+    </EditForm>
+</div>
+@if (_todos == null)
+{
+    <p><em>Loading todos...</em></p>
+}
+else
+{
+    if (_todos.Count == 0)
+    {
+        <p>@_todos.Count</p>
+        <p>No Todos Found!</p>
+    }
+    else
+    {
+
+        foreach (var todo in _todos)
+        {
+            <ul class="list-group">
+                <li class="list-group-item">@todo.Description <input type="checkbox" @bind="@todo.IsCompleted" @onmouseout="@(() => UpdateTodo(todo))" /> <button class="btn btn-outline-danger float-right" @onclick="@(() => DeleteTodo(todo))">X</button></li>
+            </ul>
+
+        }
+    }
+}
+
+
+@code {
+
+    private List<TodoModel> _todos;
+    private TodoModel newTodo = new TodoModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetTodos();
+    }
+
+    private async Task GetTodos()
+    {
+        _todos = await Http.GetJsonAsync<List<TodoModel>>(@"\api\todo");
+    }
+
+    private async Task CreateNewTodo(TodoModel todo)
+    {
+        await Http.PostJsonAsync<TodoModel>("/api/todo", todo);
+    }
+
+    private async Task HandleTodoSubmit()
+    {
+        await CreateNewTodo(newTodo);
+        await GetTodos();
+    }
+
+    private async Task UpdateTodo(TodoModel todoModel)
+    {
+        await Http.PutJsonAsync<TodoModel>($"/api/todo/{todoModel.Id}", todoModel);
+        await GetTodos();
+    }
+
+    private async Task DeleteTodo(TodoModel todoModel)
+    {
+        await Http.DeleteAsync($"/api/todo/{todoModel.Id}");
+        await GetTodos();
+    }
+}
